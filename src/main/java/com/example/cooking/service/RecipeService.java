@@ -1,6 +1,8 @@
 package com.example.cooking.service;
 
+import com.example.cooking.DTO.entry.CreateRecipeDto;
 import com.example.cooking.entity.Recipe;
+import com.example.cooking.entity.User;
 import com.example.cooking.repository.RecipeRepository;
 import com.example.cooking.repository.specifications.RecipeSpecifications;
 import org.springframework.data.jpa.domain.Specification;
@@ -12,9 +14,11 @@ import java.util.List;
 public class RecipeService {
 
     private final RecipeRepository recipeRepository;
+    private final UserService userService;
 
-    public RecipeService(RecipeRepository recipeRepository) {
+    public RecipeService(RecipeRepository recipeRepository, UserService userService) {
         this.recipeRepository = recipeRepository;
+        this.userService = userService;
     }
 
     public List<Recipe> getAllRecipes() {
@@ -30,10 +34,18 @@ public class RecipeService {
         return recipeRepository.save(recipe);
     }
 
-    public Recipe updateRecipe(Long id, Recipe recipe) {
+    public Recipe updateRecipe(Long id, CreateRecipeDto updatedRecipe) {
         Recipe existingRecipe = getRecipeById(id);
-        existingRecipe.setName(recipe.getName());
-        existingRecipe.setIngredients(recipe.getIngredients());
+        if (updatedRecipe.getName() != null) {
+            existingRecipe.setName(updatedRecipe.getName());
+        }
+        if (updatedRecipe.getIngredients() != null) {
+            existingRecipe.setIngredients(updatedRecipe.getIngredients());
+        }
+        if (updatedRecipe.getUsername() != null) {
+            User newUser = userService.findByUsername(updatedRecipe.getUsername());
+            existingRecipe.setAuthor(newUser);
+        }
         return recipeRepository.save(existingRecipe);
     }
 

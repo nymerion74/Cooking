@@ -11,6 +11,9 @@ import org.springframework.web.filter.GenericFilterBean;
 
 import java.io.IOException;
 
+/**
+ * Class used for JWT token (authentication endpoint)
+ */
 public class JwtAuthenticationFilter extends GenericFilterBean {
 
     private JwtTokenProvider jwtTokenProvider;

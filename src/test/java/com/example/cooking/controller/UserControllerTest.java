@@ -1,5 +1,8 @@
 package com.example.cooking.controller;
 
+import com.example.cooking.DTO.entry.LoginDto;
+import com.example.cooking.DTO.mapper.UserMapper;
+import com.example.cooking.DTO.response.UserDto;
 import com.example.cooking.config.JwtTokenProvider;
 import com.example.cooking.entity.User;
 import com.example.cooking.service.UserService;
@@ -7,81 +10,91 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(SpringExtension.class)
-@WebMvcTest(UserController.class)
+@ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 public class UserControllerTest {
 
-    @Autowired
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private UserService userService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
+    private UserMapper userMapper;
+    @Mock
     private JwtTokenProvider jwtTokenProvider;
-
-    private User user;
+    @InjectMocks
+    private UserController userController;
 
     @BeforeEach
     void setUp() {
-        user = new User();
-        user.setId(1L);
-        user.setUsername("testUser");
-        user.setPassword("password");
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
     }
 
     @Test
-    void registerUserShouldReturnCreated() throws Exception {
-        given(userService.registerUser(any(User.class))).willReturn(user);
+    void registerUserShouldReturnUserDto() throws Exception {
+        LoginDto loginDto = new LoginDto("testUser", "password");
+        User user = new User();
+        user.setUsername("testUser");
+        UserDto userDto = new UserDto(1L, "testUser");
+
+        when(userMapper.toEntity(any(LoginDto.class))).thenReturn(user);
+        when(userService.registerUser(any(User.class))).thenReturn(user);
+        when(userMapper.toDto(any(User.class))).thenReturn(userDto);
 
         mockMvc.perform(post("/users/register")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .with(csrf())
-                                .content(objectMapper.writeValueAsString(user)))
+                                .content(objectMapper.writeValueAsString(loginDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value(user.getUsername()));
+                .andExpect(jsonPath("$.username").value(userDto.getUsername()));
     }
 
     @Test
-    void loginUserShouldReturnOk() throws Exception {
-        given(userService.loginUser(any())).willReturn(user);
+    void loginUserShouldReturnToken() throws Exception {
+        LoginDto loginDto = new LoginDto("testUser", "password");
+        User user = new User();
+        user.setUsername("testUser");
+        UserDto userDto = new UserDto(1L, "testUser");
+
+        when(userService.loginUser(any(LoginDto.class))).thenReturn(user);
+        when(userMapper.toDto(any(User.class))).thenReturn(userDto);
+        when(jwtTokenProvider.createToken(eq("testUser"))).thenReturn("token");
 
         mockMvc.perform(post("/users/login")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .with(csrf())
-                                .content(objectMapper.writeValueAsString(user)))
+                                .content(objectMapper.writeValueAsString(loginDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(user.getUsername()));
+                .andExpect(header().string("Authorization", "Bearer token"))
+                .andExpect(jsonPath("$.username").value(userDto.getUsername()));
     }
 
     @Test
-    void getUserByIdShouldReturnUser() throws Exception {
-        given(userService.getUserById(1L)).willReturn(user);
+    void getUserByIdShouldReturnUserDto() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testUser");
+        UserDto userDto = new UserDto(1L, "testUser");
+
+        when(userService.getUserById(eq(1L))).thenReturn(user);
+        when(userMapper.toDto(any(User.class))).thenReturn(userDto);
 
         mockMvc.perform(get("/users/{id}", 1L)
-                                .with(csrf())
-                                .accept(MediaType.APPLICATION_JSON))
+                                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(user.getUsername()));
+                .andExpect(jsonPath("$.username").value(userDto.getUsername()));
     }
 }

@@ -1,6 +1,6 @@
 package com.example.cooking.service;
 
-import com.example.cooking.DTO.LoginDto;
+import com.example.cooking.DTO.entry.LoginDto;
 import com.example.cooking.entity.User;
 import com.example.cooking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
@@ -19,13 +21,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 public class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @InjectMocks
     private UserService userService;
+
 
     private User user;
 
@@ -50,7 +56,8 @@ public class UserServiceTest {
     @Test
     void shouldLoginUser() throws Exception {
         LoginDto dto = new LoginDto(user.getUsername(), user.getPassword());
-        when(userRepository.findUserByUsernameAndPassword(user.getUsername(), user.getPassword())).thenReturn(Optional.ofNullable(user));
+        when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.ofNullable(user));
+        when(bCryptPasswordEncoder.matches(any(), any())).thenReturn(true);
         User loggedInUser = userService.loginUser(dto);
 
         assertThat(loggedInUser).isEqualTo(user);

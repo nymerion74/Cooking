@@ -1,24 +1,12 @@
-package com.example.cooking.entity;
+package com.example.cooking.DTO.entry;
 
-import jakarta.persistence.*;
-
-@Entity
-@Table(name = "Member")
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+public class LoginDto {
     private String username;
     private String password;
 
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public LoginDto(String username, String password) {
+        this.username = username;
+        this.password = password;
     }
 
     public String getUsername() {
@@ -36,6 +24,4 @@ public class User {
     public void setPassword(String password) {
         this.password = password;
     }
-
-
 }

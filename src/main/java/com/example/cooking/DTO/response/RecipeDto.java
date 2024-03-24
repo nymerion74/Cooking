@@ -1,20 +1,21 @@
-package com.example.cooking.entity;
+package com.example.cooking.DTO.response;
 
+public class RecipeDto {
+    Long id;
+    String name;
+    String ingredients;
+    String author;
 
-import jakarta.persistence.*;
+    public RecipeDto(Long id, String name, String ingredients, String author) {
+        this.id = id;
+        this.name = name;
+        this.ingredients = ingredients;
+        this.author = author;
+    }
 
-@Entity
-@Table(name = "Recipe")
-public class Recipe {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    public RecipeDto() {
 
-    private String name;
-    private String ingredients;
-    @ManyToOne
-    @JoinColumn(name = "author_id")
-    private User author;
+    }
 
     public Long getId() {
         return id;
@@ -40,11 +41,11 @@ public class Recipe {
         this.ingredients = ingredients;
     }
 
-    public User getAuthor() {
+    public String getAuthor() {
         return author;
     }
 
-    public void setAuthor(User author) {
+    public void setAuthor(String author) {
         this.author = author;
     }
 }

@@ -10,5 +10,7 @@ if you need extra data, you can add some in the data.sql ( src/main/resources )
 Login and Create user are the only endpoint accesible without authentification
 
 For testing, you can login with admin/password and then :
+
 1-In swagger, get the bearer token after login
+
 2-paste the bearer token in "Authorize" at the top of swagger

@@ -1,116 +1,129 @@
 package com.example.cooking.controller;
 
+import com.example.cooking.DTO.entry.CreateRecipeDto;
+import com.example.cooking.DTO.mapper.RecipeMapper;
+import com.example.cooking.DTO.response.RecipeDto;
 import com.example.cooking.entity.Recipe;
 import com.example.cooking.entity.User;
 import com.example.cooking.service.RecipeService;
+import com.example.cooking.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(SpringExtension.class)
-@WebMvcTest(RecipeController.class)
+@ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 public class RecipeControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private RecipeService recipeService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Mock
+    private UserService userService;
 
-    private Recipe recipe;
+    @Mock
+    private RecipeMapper recipeMapper;
+
+    @InjectMocks
+    private RecipeController recipeController;
+
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        recipe = new Recipe();
-        recipe.setId(1L);
-        recipe.setName("Test Recipe");
-        recipe.setIngredients("Test Ingredients");
-        User user = new User();
-        user.setPassword("");
-        user.setId(1l);
-        user.setUsername("test");
-        recipe.setAuthor(user);
+        mockMvc = MockMvcBuilders.standaloneSetup(recipeController).build();
     }
 
     @Test
     void getAllRecipesShouldReturnRecipes() throws Exception {
-        List<Recipe> recipes = Arrays.asList(recipe);
-        given(recipeService.getAllRecipes()).willReturn(recipes);
+        RecipeDto recipeDto = new RecipeDto(1L, "Test Recipe", "Test Ingredients", "testUser");
+        List<RecipeDto> dtos = Arrays.asList(recipeDto);
+
+        when(recipeService.getAllRecipes()).thenReturn(Arrays.asList(new Recipe()));
+        when(recipeMapper.toDto(any())).thenReturn(recipeDto);
 
         mockMvc.perform(get("/recipes")
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name", is(recipe.getName())));
+                .andExpect(jsonPath("$[0].name").value(recipeDto.getName()));
     }
 
     @Test
     void getRecipeByIdShouldReturnRecipe() throws Exception {
-        given(recipeService.getRecipeById(recipe.getId())).willReturn(recipe);
+        RecipeDto recipeDto = new RecipeDto(1L, "Test Recipe", "Test Ingredients", "testUser");
 
-        mockMvc.perform(get("/recipes/{id}", recipe.getId())
-                                .with(csrf())
+        when(recipeService.getRecipeById(eq(1L))).thenReturn(new Recipe());
+        when(recipeMapper.toDto(any())).thenReturn(recipeDto);
+
+        mockMvc.perform(get("/recipes/{id}", 1L)
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(recipe.getName())));
+                .andExpect(jsonPath("$.name").value(recipeDto.getName()));
     }
 
     @Test
     void createRecipeShouldReturnCreatedRecipe() throws Exception {
-        given(recipeService.createRecipe(any())).willReturn(recipe);
+        CreateRecipeDto createRecipeDto = new CreateRecipeDto("New Recipe", "Ingredients", "testUser");
+        RecipeDto recipeDto = new RecipeDto(1L, "New Recipe", "Ingredients", "testUser");
+        User user = new User();
+        user.setUsername("testUser");
+        Recipe t = new Recipe();
+        t.setIngredients("Ingredients");
+        t.setName("New Recipe");
+        t.setAuthor(user);
+        when(userService.findByUsername(eq("testUser"))).thenReturn(user);
+        when(recipeService.createRecipe(any())).thenReturn(t);
+        when(recipeMapper.toEntity(any())).thenReturn(t);
+        when(recipeMapper.toDto(any())).thenReturn(recipeDto);
 
         mockMvc.perform(post("/recipes")
-                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(recipe)))
+                                .content(objectMapper.writeValueAsString(createRecipeDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is(recipe.getName())));
+                .andExpect(jsonPath("$.name").value(recipeDto.getName()));
     }
 
     @Test
     void updateRecipeShouldReturnUpdatedRecipe() throws Exception {
-        given(recipeService.updateRecipe(eq(recipe.getId()), any(Recipe.class))).willReturn(recipe);
+        CreateRecipeDto updateRecipeDto = new CreateRecipeDto("Updated Recipe", "Updated Ingredients", "testUser");
+        RecipeDto recipeDto = new RecipeDto(1L, "Updated Recipe", "Updated Ingredients", "testUser");
 
-        mockMvc.perform(put("/recipes/{id}", recipe.getId())
-                                .with(csrf())
+        when(recipeService.updateRecipe(eq(1L), any(CreateRecipeDto.class))).thenReturn(new Recipe());
+        when(recipeMapper.toDto(any())).thenReturn(recipeDto);
+
+        mockMvc.perform(put("/recipes/{id}", 1L)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(recipe)))
+                                .content(objectMapper.writeValueAsString(updateRecipeDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(recipe.getName())));
+                .andExpect(jsonPath("$.name").value(updateRecipeDto.getName()));
     }
 
     @Test
     void deleteRecipeShouldReturnNoContent() throws Exception {
-        mockMvc.perform(delete("/recipes/{id}", recipe.getId())
-                                .with(csrf())
+        mockMvc.perform(delete("/recipes/{id}", 1L)
                                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
-
 }

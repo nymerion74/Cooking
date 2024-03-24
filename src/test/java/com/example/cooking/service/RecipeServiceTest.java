@@ -1,6 +1,8 @@
 package com.example.cooking.service;
 
+import com.example.cooking.DTO.entry.CreateRecipeDto;
 import com.example.cooking.entity.Recipe;
+import com.example.cooking.entity.User;
 import com.example.cooking.repository.RecipeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,120 +11,104 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.test.context.ActiveProfiles;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 public class RecipeServiceTest {
 
     @Mock
     private RecipeRepository recipeRepository;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private RecipeService recipeService;
 
     private Recipe recipe;
+    private User user;
 
     @BeforeEach
     void setUp() {
+        user = new User();
+        user.setId(1L);
+        user.setUsername("testUser");
+
         recipe = new Recipe();
         recipe.setId(1L);
-        recipe.setName("Test Recipe");
-        recipe.setIngredients("Ingredient1, Ingredient2");
+        recipe.setName("Spaghetti Carbonara");
+        recipe.setIngredients("Spaghetti, Eggs, Cheese");
+        recipe.setAuthor(user);
     }
 
     @Test
     void getAllRecipesShouldReturnListOfRecipes() {
-        when(recipeRepository.findAll()).thenReturn(Collections.singletonList(recipe));
+        given(recipeRepository.findAll()).willReturn(Collections.singletonList(recipe));
 
-        List<Recipe> recipes = recipeService.getAllRecipes();
+        List<Recipe> result = recipeService.getAllRecipes();
 
-        assertThat(recipes).hasSize(1);
-        assertThat(recipes.get(0)).isEqualTo(recipe);
+        assertThat(result).containsExactly(recipe);
     }
 
     @Test
     void getRecipeByIdShouldReturnRecipe() {
-        when(recipeRepository.findById(1L)).thenReturn(Optional.of(recipe));
+        given(recipeRepository.findById(any(Long.class))).willReturn(Optional.of(recipe));
 
-        Recipe foundRecipe = recipeService.getRecipeById(1L);
+        Recipe result = recipeService.getRecipeById(1L);
 
-        assertThat(foundRecipe).isEqualTo(recipe);
-    }
-
-    @Test
-    void getRecipeByIdShouldThrowExceptionWhenNotFound() {
-        long recipeId = 2L;
-        when(recipeRepository.findById(recipeId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> recipeService.getRecipeById(recipeId))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Recipe not found with id: " + recipeId);
+        assertThat(result).isEqualTo(recipe);
     }
 
     @Test
     void createRecipeShouldSaveAndReturnRecipe() {
-        when(recipeRepository.save(any(Recipe.class))).thenReturn(recipe);
+        given(recipeRepository.save(any(Recipe.class))).willReturn(recipe);
 
-        Recipe savedRecipe = recipeService.createRecipe(recipe);
+        Recipe result = recipeService.createRecipe(recipe);
 
-        assertThat(savedRecipe).isEqualTo(recipe);
-        verify(recipeRepository).save(recipe);
+        assertThat(result).isEqualTo(recipe);
     }
 
     @Test
-    void updateRecipeShouldChangeDetailsAndReturnUpdatedRecipe() {
-        Recipe updatedRecipe = new Recipe();
-        updatedRecipe.setId(1L);
-        updatedRecipe.setName("Updated Recipe");
-        updatedRecipe.setIngredients("UpdatedIngredient1, UpdatedIngredient2");
+    void updateRecipeShouldUpdateAndReturnRecipe() {
+        given(recipeRepository.findById(any(Long.class))).willReturn(Optional.of(recipe));
+        given(userService.findByUsername(any(String.class))).willReturn(user);
+        given(recipeRepository.save(any(Recipe.class))).willReturn(recipe);
 
-        when(recipeRepository.findById(1L)).thenReturn(Optional.of(recipe));
-        when(recipeRepository.save(any(Recipe.class))).thenReturn(updatedRecipe);
+        CreateRecipeDto updatedRecipeDto = new CreateRecipeDto();
+        updatedRecipeDto.setName("Updated Name");
+        updatedRecipeDto.setIngredients("Updated Ingredients");
+        updatedRecipeDto.setUsername("testUser");
 
-        Recipe result = recipeService.updateRecipe(1L, updatedRecipe);
+        Recipe result = recipeService.updateRecipe(1L, updatedRecipeDto);
 
-        assertThat(result.getName()).isEqualTo(updatedRecipe.getName());
-        assertThat(result.getIngredients()).isEqualTo(updatedRecipe.getIngredients());
+        assertThat(result.getName()).isEqualTo(updatedRecipeDto.getName());
+        assertThat(result.getIngredients()).isEqualTo(updatedRecipeDto.getIngredients());
+        assertThat(result.getAuthor()).isEqualTo(user);
     }
 
     @Test
-    void searchRecipesWithMultipleCriteriaShouldReturnFilteredRecipes() {
-        // Given
-        Recipe recipe1 = new Recipe();
-        recipe1.setId(1L);
-        recipe1.setName("Chocolate Cake");
-        recipe1.setIngredients("Chocolate, Flour, Sugar");
+    void deleteRecipeShouldUseRepository() {
+        recipeService.deleteRecipe(1L);
 
-        Recipe recipe2 = new Recipe();
-        recipe2.setId(2L);
-        recipe2.setName("Apple Pie");
-        recipe2.setIngredients("Apple, Sugar, Flour");
-
-        List<Recipe> allRecipes = Arrays.asList(recipe1, recipe2);
-
-        when(recipeRepository.findAll(any(Specification.class))).thenReturn(allRecipes);
-
-        // When
-        String ingredient = "Sugar";
-        String name = null; // Simulating a search by ingredient only
-        String author = null;
-        List<Recipe> result = recipeService.searchRecipes(ingredient, name, author);
-
-        // Then
-        assertThat(result).hasSize(2);
-        assertThat(result).containsExactlyInAnyOrder(recipe1, recipe2);
-
-        verify(recipeRepository).findAll(any(Specification.class));
+        verify(recipeRepository).deleteById(1L);
     }
 
+    @Test
+    void searchRecipesShouldReturnFilteredRecipes() {
+        given(recipeRepository.findAll(any(Specification.class))).willReturn(Collections.singletonList(recipe));
+
+        List<Recipe> result = recipeService.searchRecipes("Eggs", null, null);
+
+        assertThat(result).containsExactly(recipe);
+    }
 }

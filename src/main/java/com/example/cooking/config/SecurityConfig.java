@@ -14,6 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
+    /**
+     * this method handle authorized endpoints (routes) or not.
+     * handle https too
+     */
     public SecurityFilterChain filterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider) throws Exception {
         http.cors(Customizer.withDefaults())
                 .csrf().disable()

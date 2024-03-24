@@ -26,7 +26,7 @@ public class JwtTokenProvider {
         this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     }
 
-    // Générer un token JWT
+
     public String createToken(String username) {
         Claims claims = Jwts.claims().setSubject(username).build();
         Date now = new Date();
@@ -40,7 +40,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Valider le token JWT
+
     public boolean validateToken(String token) {
         try {
             Jws<Claims> claims = Jwts.parser().setSigningKey(secretKey).build().parseClaimsJws(token);

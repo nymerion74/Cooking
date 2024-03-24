@@ -1,11 +1,17 @@
 package com.example.cooking.controller;
 
+import com.example.cooking.DTO.entry.CreateRecipeDto;
+import com.example.cooking.DTO.mapper.RecipeMapper;
+import com.example.cooking.DTO.response.RecipeDto;
 import com.example.cooking.entity.Recipe;
+import com.example.cooking.entity.User;
 import com.example.cooking.service.RecipeService;
+import com.example.cooking.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -13,33 +19,50 @@ import java.util.List;
 public class RecipeController {
 
     private final RecipeService recipeService;
+    private final UserService userService;
+    private final RecipeMapper recipeMapper;
 
-    public RecipeController(RecipeService recipeService) {
+    public RecipeController(RecipeService recipeService, UserService userService, RecipeMapper recipeMapper) {
         this.recipeService = recipeService;
+        this.userService = userService;
+        this.recipeMapper = recipeMapper;
     }
 
     @GetMapping
-    public ResponseEntity<List<Recipe>> getAllRecipes() {
+    public ResponseEntity<List<RecipeDto>> getAllRecipes() {
         List<Recipe> recipes = recipeService.getAllRecipes();
-        return new ResponseEntity<>(recipes, HttpStatus.OK);
+        List<RecipeDto> dtos = new ArrayList<>();
+        for (var recipe : recipes) {
+            dtos.add(recipeMapper.toDto(recipe));
+        }
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Recipe> getRecipeById(@PathVariable Long id) {
+    public ResponseEntity<RecipeDto> getRecipeById(@PathVariable Long id) {
         Recipe recipe = recipeService.getRecipeById(id);
-        return new ResponseEntity<>(recipe, HttpStatus.OK);
+        RecipeDto dto = recipeMapper.toDto(recipe);
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<Recipe> createRecipe(@RequestBody Recipe recipe) {
+    public ResponseEntity<RecipeDto> createRecipe(@RequestBody CreateRecipeDto createRecipeDto) {
+        User author = userService.findByUsername(createRecipeDto.getUsername());
+
+        Recipe recipe = recipeMapper.toEntity(createRecipeDto);
+        recipe.setAuthor(author);
+
         Recipe createdRecipe = recipeService.createRecipe(recipe);
-        return new ResponseEntity<>(createdRecipe, HttpStatus.CREATED);
+        RecipeDto createdRecipeDto = recipeMapper.toDto(createdRecipe);
+
+        return new ResponseEntity<>(createdRecipeDto, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Recipe> updateRecipe(@PathVariable Long id, @RequestBody Recipe recipe) {
-        Recipe updatedRecipe = recipeService.updateRecipe(id, recipe);
-        return new ResponseEntity<>(updatedRecipe, HttpStatus.OK);
+    public ResponseEntity<RecipeDto> updateRecipe(@PathVariable Long id, @RequestBody CreateRecipeDto updateRecipeDto) {
+        Recipe updatedRecipe = recipeService.updateRecipe(id, updateRecipeDto);
+        RecipeDto dto = recipeMapper.toDto(updatedRecipe);
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
@@ -49,12 +72,16 @@ public class RecipeController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Recipe>> searchRecipes(
+    public ResponseEntity<List<RecipeDto>> searchRecipes(
             @RequestParam(required = false) String ingredient,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String author) {
 
         List<Recipe> recipes = recipeService.searchRecipes(ingredient, name, author);
-        return ResponseEntity.ok(recipes);
+        List<RecipeDto> dtos = new ArrayList<>();
+        for (var recipe : recipes) {
+            dtos.add(recipeMapper.toDto(recipe));
+        }
+        return ResponseEntity.ok(dtos);
     }
 }

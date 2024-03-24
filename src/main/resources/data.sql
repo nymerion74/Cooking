@@ -1,10 +1,10 @@
 INSERT INTO Member (username, password)
-VALUES ('john_doe', 'password123');
+VALUES ('john_doe', '$2a$10$9A6KpkGrpzdTRA9yGgtxP.65uu/vHo7ABvJ859iGPun0H8B2s0eFe');
 INSERT INTO Member (username, password)
-VALUES ('jane_smith', 'securePassword');
+VALUES ('jane_smith', '$2a$10$9A6KpkGrpzdTRA9yGgtxP.65uu/vHo7ABvJ859iGPun0H8B2s0eFe');
 INSERT INTO Member (username, password)
-VALUES ('admin', 'password');
-
+VALUES ('admin', '$2a$10$9A6KpkGrpzdTRA9yGgtxP.65uu/vHo7ABvJ859iGPun0H8B2s0eFe');
+-- password = password
 
 INSERT INTO Recipe (name, ingredients, author_id)
 VALUES ('Spaghetti Carbonara', 'Spaghetti, Bacon, Eggs, Parmesan Cheese',
